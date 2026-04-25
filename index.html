@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToolVault Editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg0:    #0b0e12;
+  --bg1:    #111520;
+  --bg2:    #161c2b;
+  --bg3:    #1c2435;
+  --border: #252e42;
+  --border2:#2d3a52;
+  --a1:     #4af0b0;
+  --a2:     #f0a74a;
+  --a3:     #4ab4f0;
+  --a4:     #f04a7a;
+  --a5:     #b04af0;
+  --txt:    #c8d4e8;
+  --muted:  #4a5872;
+  --sel:    rgba(74,240,176,0.10);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg0); color: var(--txt); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; }
+
+/* ── LAYOUT ── */
+#app { display: grid; grid-template-rows: 44px 1fr; height: 100vh; }
+
+/* ── TOPBAR ── */
+#topbar {
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0; padding: 0;
+  overflow: hidden;
+}
+.tb-logo {
+  padding: 0 18px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600; font-size: 13px;
+  color: var(--a1);
+  border-right: 1px solid var(--border);
+  height: 100%; display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.tb-logo span { color: var(--muted); font-weight: 300; }
+#store-tabs {
+  display: flex; height: 100%; overflow-x: auto; flex: 1;
+  scrollbar-width: none;
+}
+#store-tabs::-webkit-scrollbar { display: none; }
+.store-tab {
+  padding: 0 16px;
+  height: 100%;
+  display: flex; align-items: center; gap: 8px;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+  user-select: none;
+}
+.store-tab:hover { background: var(--bg2); color: var(--txt); }
+.store-tab.active { background: var(--bg2); color: var(--a1); }
+.store-tab.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--a1);
+}
+.store-tab .tab-type {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  background: rgba(74,240,176,0.1); color: var(--a1);
+}
+.store-tab .tab-type.list { background: rgba(240,167,74,0.1); color: var(--a2); }
+.store-tab .tab-del {
+  opacity: 0; font-size: 10px; color: var(--a4);
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+  border-radius: 3px; transition: opacity 0.15s;
+}
+.store-tab:hover .tab-del { opacity: 1; }
+.tb-actions {
+  display: flex; height: 100%;
+  border-left: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tb-btn {
+  padding: 0 16px; height: 100%; border: none;
+  background: none; cursor: pointer; color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s, color 0.15s;
+  border-left: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tb-btn:hover { background: var(--bg2); color: var(--txt); }
+.tb-btn.primary { color: var(--a1); }
+.tb-btn.primary:hover { background: rgba(74,240,176,0.08); }
+.tb-btn.danger { color: var(--a4); }
+.tb-btn.danger:hover { background: rgba(240,74,122,0.08); }
+
+/* ── MAIN AREA ── */
+#main { display: grid; grid-template-columns: 220px 1fr 280px; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-section { padding: 10px 14px 6px; }
+.sidebar-label {
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 8px;
+}
+.sidebar-input {
+  width: 100%;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--txt); padding: 6px 8px; border-radius: 5px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  outline: none; transition: border-color 0.15s;
+}
+.sidebar-input:focus { border-color: var(--a1); }
+.sidebar-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.sidebar-row .sidebar-input { flex: 1; }
+.mini-btn {
+  padding: 6px 10px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--txt);
+  border-radius: 5px; cursor: pointer; font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.mini-btn:hover { background: var(--border); color: var(--a1); border-color: var(--a1); }
+.mini-btn.accent { border-color: var(--a1); color: var(--a1); }
+.mini-btn.accent:hover { background: rgba(74,240,176,0.12); }
+.mini-btn.warn { border-color: var(--a4); color: var(--a4); }
+.mini-btn.warn:hover { background: rgba(240,74,122,0.1); }
+
+.type-select {
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--txt); padding: 6px 8px; border-radius: 5px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  outline: none; cursor: pointer;
+}
+
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+/* snapshots */
+#snap-list { overflow-y: auto; flex: 1; padding: 0 14px 14px; }
+.snap-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; border-radius: 5px; margin-bottom: 4px;
+  background: var(--bg2); border: 1px solid var(--border);
+  cursor: pointer; transition: border-color 0.15s;
+}
+.snap-item:hover { border-color: var(--a3); }
+.snap-name { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--a3); }
+.snap-time { font-size: 10px; color: var(--muted); }
+.snap-actions { display: flex; gap: 4px; }
+.snap-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; padding: 2px 5px; border-radius: 3px;
+  transition: background 0.1s;
+}
+.snap-btn.restore { color: var(--a3); }
+.snap-btn.restore:hover { background: rgba(74,180,240,0.15); }
+.snap-btn.del { color: var(--a4); }
+.snap-btn.del:hover { background: rgba(240,74,122,0.15); }
+
+/* ── EDITOR PANEL ── */
+#editor-panel {
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg0);
+}
+#editor-toolbar {
+  background: var(--bg1); border-bottom: 1px solid var(--border);
+  padding: 8px 14px; display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.ed-label { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+#search-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--txt); padding: 5px 10px; border-radius: 5px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  width: 180px; outline: none;
+}
+#search-box:focus { border-color: var(--a1); }
+
+/* KV TABLE */
+#kv-table-wrap { flex: 1; overflow-y: auto; padding: 0; }
+#kv-table {
+  width: 100%; border-collapse: collapse;
+}
+#kv-table thead th {
+  background: var(--bg1); padding: 9px 14px;
+  text-align: left; font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 2;
+}
+#kv-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+#kv-table tbody tr:hover { background: var(--bg2); }
+#kv-table tbody tr.selected { background: var(--sel); }
+#kv-table td {
+  padding: 0;
+}
+.cell-input {
+  width: 100%; background: transparent; border: none;
+  color: var(--txt); padding: 9px 14px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  outline: none;
+}
+.cell-input:focus { background: rgba(74,240,176,0.05); }
+.cell-key { color: var(--a3); }
+.cell-val { color: var(--a1); }
+.cell-del {
+  width: 40px; text-align: center;
+}
+.cell-del button {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 14px; padding: 8px;
+  border-radius: 4px; transition: color 0.1s, background 0.1s;
+}
+.cell-del button:hover { color: var(--a4); background: rgba(240,74,122,0.1); }
+
+/* LIST TABLE */
+#list-table-wrap { flex: 1; overflow-y: auto; }
+#list-table { width: 100%; border-collapse: collapse; }
+#list-table thead th {
+  background: var(--bg1); padding: 9px 14px;
+  text-align: left; font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 2;
+}
+#list-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+#list-table tbody tr:hover { background: var(--bg2); }
+#list-table td { padding: 0; }
+.list-idx { width: 60px; padding: 9px 14px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: right; border-right: 1px solid var(--border); }
+.list-val-cell { color: var(--a2); }
+
+/* add row bar */
+#add-row-bar {
+  background: var(--bg1); border-top: 1px solid var(--border);
+  padding: 8px 14px; display: flex; gap: 8px; align-items: center;
+}
+#new-key, #new-val, #new-listval {
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--txt); padding: 6px 10px; border-radius: 5px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  outline: none; flex: 1;
+}
+#new-key:focus, #new-val:focus, #new-listval:focus { border-color: var(--a1); }
+#new-key { color: var(--a3); max-width: 200px; }
+#new-val { color: var(--a1); }
+#new-listval { color: var(--a2); }
+
+/* empty state */
+#empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  color: var(--muted);
+}
+.empty-icon { font-size: 48px; opacity: 0.3; }
+.empty-text { font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+
+/* ── RIGHT PANEL ── */
+#right-panel {
+  background: var(--bg1); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.rp-section {
+  border-bottom: 1px solid var(--border); padding: 14px;
+}
+.rp-title {
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 10px;
+}
+.rp-stat { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.rp-stat-label { font-size: 12px; color: var(--muted); }
+.rp-stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--a1); }
+
+#json-preview {
+  flex: 1; overflow: auto; padding: 14px;
+}
+#json-textarea {
+  width: 100%; height: 100%; min-height: 160px;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: #94b8d4; padding: 10px 12px; border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  line-height: 1.6; outline: none; resize: none;
+  transition: border-color 0.15s;
+}
+#json-textarea:focus { border-color: var(--a3); }
+
+#log-panel { flex: 1; overflow-y: auto; padding: 8px 14px; }
+.log-entry {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  padding: 3px 0; border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+.log-entry .log-time { color: var(--a5); margin-right: 8px; }
+.log-entry .log-msg { color: var(--txt); }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--bg3); border: 1px solid var(--a1);
+  color: var(--a1); padding: 10px 18px; border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  transform: translateY(20px); opacity: 0;
+  transition: transform 0.2s, opacity 0.2s;
+  pointer-events: none; z-index: 100;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.error { border-color: var(--a4); color: var(--a4); }
+
+/* ── MODAL ── */
+#modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: none; align-items: center; justify-content: center; z-index: 200;
+}
+#modal-overlay.show { display: flex; }
+#modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 28px; min-width: 340px;
+  box-shadow: 0 16px 64px rgba(0,0,0,0.6);
+}
+#modal h3 { font-family: 'IBM Plex Mono', monospace; color: var(--a1); margin-bottom: 16px; font-size: 14px; }
+#modal-input {
+  width: 100%; background: var(--bg0); border: 1px solid var(--border2);
+  color: var(--txt); padding: 8px 12px; border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; outline: none;
+  margin-bottom: 16px;
+}
+#modal-input:focus { border-color: var(--a1); }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-logo">🗄️ <span>ToolVault</span> Editor</div>
+    <div id="store-tabs"></div>
+    <div class="tb-actions">
+      <button class="tb-btn" onclick="addStoreDialog()">＋ Store</button>
+      <button class="tb-btn" onclick="importSEF()">↑ Import .sef</button>
+      <button class="tb-btn" onclick="importESEF()">↑ Import .esef</button>
+      <button class="tb-btn primary" onclick="exportSEF()">↓ .sef</button>
+      <button class="tb-btn primary" onclick="exportESEF()">↓ .esef</button>
+      <button class="tb-btn" onclick="sendToScratch()" title="Push data to TurboWarp extension">⟳ Push to Scratch</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Add Entry</div>
+        <div id="kv-add-fields">
+          <div class="sidebar-row">
+            <input class="sidebar-input" id="sb-key" placeholder="key" style="color:var(--a3)">
+          </div>
+          <div class="sidebar-row">
+            <input class="sidebar-input" id="sb-val" placeholder="value" style="color:var(--a1)">
+            <button class="mini-btn accent" onclick="addKVEntry()">Add</button>
+          </div>
+        </div>
+        <div id="list-add-fields" style="display:none">
+          <div class="sidebar-row">
+            <input class="sidebar-input" id="sb-listval" placeholder="new item" style="color:var(--a2)">
+            <button class="mini-btn accent" onclick="addListEntry()">Add</button>
+          </div>
+        </div>
+        <hr class="sidebar-divider">
+        <div class="sidebar-row">
+          <button class="mini-btn" onclick="sortAsc()">Sort ↑</button>
+          <button class="mini-btn" onclick="sortDesc()">Sort ↓</button>
+          <button class="mini-btn warn" onclick="clearCurrentStore()">Clear</button>
+        </div>
+      </div>
+
+      <hr class="sidebar-divider" style="margin:0">
+
+      <div class="sidebar-section" style="padding-bottom:10px">
+        <div class="sidebar-label">Snapshots</div>
+        <div class="sidebar-row">
+          <input class="sidebar-input" id="snap-name" placeholder="snapshot name">
+          <button class="mini-btn accent" onclick="takeSnapshot()">📸</button>
+        </div>
+      </div>
+      <div id="snap-list"></div>
+    </div>
+
+    <!-- EDITOR PANEL -->
+    <div id="editor-panel">
+      <div id="editor-toolbar">
+        <span class="ed-label">STORE:</span>
+        <span id="current-store-name" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--a1)">—</span>
+        <span id="current-store-type" class="tab-type" style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(74,240,176,0.1);color:var(--a1)">kv</span>
+        <input id="search-box" placeholder="Search keys / values…" oninput="renderTable()">
+        <button class="mini-btn" onclick="applyJSONEdit()">Apply JSON edit</button>
+      </div>
+
+      <div id="empty-state">
+        <div class="empty-icon">🗄️</div>
+        <div class="empty-text">No store selected</div>
+        <div style="font-size:12px;color:var(--muted)">Create or select a store to begin</div>
+      </div>
+      <div id="kv-table-wrap" style="display:none">
+        <table id="kv-table">
+          <thead><tr>
+            <th style="width:40%">KEY</th>
+            <th>VALUE</th>
+            <th style="width:40px"></th>
+          </tr></thead>
+          <tbody id="kv-tbody"></tbody>
+        </table>
+      </div>
+      <div id="list-table-wrap" style="display:none">
+        <table id="list-table">
+          <thead><tr>
+            <th style="width:60px">#</th>
+            <th>VALUE</th>
+            <th style="width:40px"></th>
+          </tr></thead>
+          <tbody id="list-tbody"></tbody>
+        </table>
+      </div>
+
+      <div id="add-row-bar" style="display:none">
+        <div id="kv-add-bar">
+          <input id="new-key" placeholder="new key…">
+          <input id="new-val" placeholder="new value…">
+          <button class="mini-btn accent" onclick="addKVEntry()">+ Add</button>
+        </div>
+        <div id="list-add-bar" style="display:none">
+          <input id="new-listval" placeholder="new item…">
+          <button class="mini-btn accent" onclick="addListEntry()">+ Push</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="right-panel">
+      <div class="rp-section">
+        <div class="rp-title">Store Info</div>
+        <div class="rp-stat"><span class="rp-stat-label">Entries</span><span class="rp-stat-val" id="rp-entries">0</span></div>
+        <div class="rp-stat"><span class="rp-stat-label">Total stores</span><span class="rp-stat-val" id="rp-stores">0</span></div>
+        <div class="rp-stat"><span class="rp-stat-label">Snapshots</span><span class="rp-stat-val" id="rp-snaps">0</span></div>
+      </div>
+      <div class="rp-section" style="flex:0 0 auto">
+        <div class="rp-title">JSON Edit</div>
+        <div id="json-preview" style="height:200px;padding:0">
+          <textarea id="json-textarea" spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="rp-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding-bottom:0">
+        <div class="rp-title">Event Log</div>
+        <div id="log-panel"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h3 id="modal-title">Create Store</h3>
+    <input id="modal-input" placeholder="name">
+    <select id="modal-type-sel" class="type-select" style="width:100%;margin-bottom:16px">
+      <option value="kv">Key-Value (kv)</option>
+      <option value="list">List</option>
+    </select>
+    <div class="modal-btns">
+      <button class="mini-btn" onclick="closeModal()">Cancel</button>
+      <button class="mini-btn accent" onclick="confirmModal()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────
+const S = {
+  stores: {},     // name -> {type:'kv'|'list', data:{} or []}
+  snapshots: {},  // name -> {stores, time}
+  current: null,
+  log: [],
+  modalCb: null,
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+function init() {
+  // listen for push from Scratch extension
+  window.addEventListener("message", (e) => {
+    const d = e.data;
+    if (!d || !d._toolvault) return;
+    if (d.type === "load") {
+      S.stores = d.stores || {};
+      if (d.activeStore && S.stores[d.activeStore]) selectStore(d.activeStore);
+      else renderTabs();
+      log(`📡 Received data from Scratch (${Object.keys(S.stores).length} stores)`);
+      toast("Data loaded from Scratch");
+    }
+    if (d.type === "pull_request") {
+      sendToScratch();
+    }
+  });
+
+  // Demo store on first load
+  if (Object.keys(S.stores).length === 0) {
+    S.stores["demo"] = { type: "kv", data: { player: "Hero", hp: "100", level: "1" } };
+    S.stores["items"] = { type: "list", data: ["sword", "shield", "potion"] };
+  }
+  renderTabs();
+  selectStore("demo");
+  log("ToolVault Editor loaded");
+}
+
+// ─── TABS ──────────────────────────────────────────────────────────────────
+function renderTabs() {
+  const el = document.getElementById("store-tabs");
+  el.innerHTML = "";
+  for (const name of Object.keys(S.stores)) {
+    const s = S.stores[name];
+    const tab = document.createElement("div");
+    tab.className = "store-tab" + (name === S.current ? " active" : "");
+    tab.innerHTML = `
+      <span>${name}</span>
+      <span class="tab-type ${s.type === 'list' ? 'list' : ''}">${s.type}</span>
+      <button class="tab-del" onclick="event.stopPropagation();deleteStore('${name}')" title="Delete store">✕</button>
+    `;
+    tab.onclick = () => selectStore(name);
+    el.appendChild(tab);
+  }
+  document.getElementById("rp-stores").textContent = Object.keys(S.stores).length;
+}
+
+function selectStore(name) {
+  S.current = name;
+  renderTabs();
+  renderTable();
+  updateRightPanel();
+  document.getElementById("current-store-name").textContent = name;
+  const t = S.stores[name]?.type || "kv";
+  const badge = document.getElementById("current-store-type");
+  badge.textContent = t;
+  badge.style.color = t === "list" ? "var(--a2)" : "var(--a1)";
+  badge.style.background = t === "list" ? "rgba(240,167,74,0.1)" : "rgba(74,240,176,0.1)";
+  // show/hide add fields in sidebar
+  document.getElementById("kv-add-fields").style.display = t === "kv" ? "" : "none";
+  document.getElementById("list-add-fields").style.display = t === "list" ? "" : "none";
+}
+
+// ─── TABLE ─────────────────────────────────────────────────────────────────
+function renderTable() {
+  if (!S.current || !S.stores[S.current]) {
+    document.getElementById("empty-state").style.display = "";
+    document.getElementById("kv-table-wrap").style.display = "none";
+    document.getElementById("list-table-wrap").style.display = "none";
+    document.getElementById("add-row-bar").style.display = "none";
+    return;
+  }
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("add-row-bar").style.display = "flex";
+  const store = S.stores[S.current];
+  const q = document.getElementById("search-box").value.toLowerCase();
+
+  if (store.type === "kv") {
+    document.getElementById("kv-table-wrap").style.display = "";
+    document.getElementById("list-table-wrap").style.display = "none";
+    document.getElementById("kv-add-bar").style.display = "flex";
+    document.getElementById("list-add-bar").style.display = "none";
+    const tbody = document.getElementById("kv-tbody");
+    tbody.innerHTML = "";
+    const entries = Object.entries(store.data).filter(([k, v]) =>
+      !q || k.toLowerCase().includes(q) || String(v).toLowerCase().includes(q)
+    );
+    for (const [key, val] of entries) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input class="cell-input cell-key" value="${esc(key)}" data-orig="${esc(key)}" onchange="renameKey(this)"></td>
+        <td><input class="cell-input cell-val" value="${esc(String(val))}" onchange="updateKV('${esc(key)}', this.value)"></td>
+        <td class="cell-del"><button onclick="deleteKey('${esc(key)}')">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+    document.getElementById("rp-entries").textContent = Object.keys(store.data).length;
+  } else {
+    document.getElementById("kv-table-wrap").style.display = "none";
+    document.getElementById("list-table-wrap").style.display = "";
+    document.getElementById("kv-add-bar").style.display = "none";
+    document.getElementById("list-add-bar").style.display = "flex";
+    const tbody = document.getElementById("list-tbody");
+    tbody.innerHTML = "";
+    const items = store.data.filter(v => !q || String(v).toLowerCase().includes(q));
+    store.data.forEach((val, i) => {
+      if (q && !String(val).toLowerCase().includes(q)) return;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="list-idx">${i + 1}</td>
+        <td><input class="cell-input list-val-cell" value="${esc(String(val))}" onchange="updateListItem(${i}, this.value)"></td>
+        <td class="cell-del"><button onclick="deleteListItem(${i})">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById("rp-entries").textContent = store.data.length;
+  }
+  // JSON preview
+  const json = JSON.stringify(store.type === "kv" ? store.data : store.data, null, 2);
+  document.getElementById("json-textarea").value = json;
+}
+
+// ─── KV OPS ────────────────────────────────────────────────────────────────
+function addKVEntry() {
+  const k = (document.getElementById("sb-key") || document.getElementById("new-key")).value.trim();
+  const v = (document.getElementById("sb-val") || document.getElementById("new-val")).value;
+  if (!k || !S.current) return;
+  S.stores[S.current].data[k] = v;
+  if (document.getElementById("sb-key")) { document.getElementById("sb-key").value = ""; document.getElementById("sb-val").value = ""; }
+  if (document.getElementById("new-key")) { document.getElementById("new-key").value = ""; document.getElementById("new-val").value = ""; }
+  renderTable(); log(`Added key "${k}"`);
+}
+function renameKey(inp) {
+  const orig = inp.dataset.orig;
+  const newK = inp.value.trim();
+  if (!newK || newK === orig) return;
+  const d = S.stores[S.current].data;
+  d[newK] = d[orig];
+  delete d[orig];
+  inp.dataset.orig = newK;
+  log(`Renamed "${orig}" → "${newK}"`);
+}
+function updateKV(key, val) {
+  S.stores[S.current].data[key] = val;
+}
+function deleteKey(key) {
+  delete S.stores[S.current].data[key];
+  renderTable(); log(`Deleted key "${key}"`);
+}
+
+// ─── LIST OPS ──────────────────────────────────────────────────────────────
+function addListEntry() {
+  const inp = document.getElementById("sb-listval") || document.getElementById("new-listval");
+  const v = inp.value;
+  if (!S.current) return;
+  S.stores[S.current].data.push(v);
+  inp.value = "";
+  renderTable(); log(`Pushed "${v}"`);
+}
+function updateListItem(i, val) { S.stores[S.current].data[i] = val; }
+function deleteListItem(i) {
+  S.stores[S.current].data.splice(i, 1);
+  renderTable(); log(`Removed item at index ${i + 1}`);
+}
+
+// ─── SORT ──────────────────────────────────────────────────────────────────
+function sortAsc() {
+  if (!S.current) return;
+  const s = S.stores[S.current];
+  if (s.type === "list") { s.data.sort((a, b) => String(a).localeCompare(String(b))); }
+  else {
+    const sorted = Object.fromEntries(Object.entries(s.data).sort(([a], [b]) => a.localeCompare(b)));
+    s.data = sorted;
+  }
+  renderTable();
+}
+function sortDesc() {
+  if (!S.current) return;
+  const s = S.stores[S.current];
+  if (s.type === "list") { s.data.sort((a, b) => String(b).localeCompare(String(a))); }
+  else {
+    const sorted = Object.fromEntries(Object.entries(s.data).sort(([a], [b]) => b.localeCompare(a)));
+    s.data = sorted;
+  }
+  renderTable();
+}
+function clearCurrentStore() {
+  if (!S.current) return;
+  if (!confirm(`Clear all data in "${S.current}"?`)) return;
+  const s = S.stores[S.current];
+  s.data = s.type === "list" ? [] : {};
+  renderTable(); log(`Cleared store "${S.current}"`);
+}
+
+// ─── JSON EDIT ─────────────────────────────────────────────────────────────
+function applyJSONEdit() {
+  if (!S.current) return;
+  try {
+    const parsed = JSON.parse(document.getElementById("json-textarea").value);
+    S.stores[S.current].data = parsed;
+    renderTable(); toast("JSON applied ✓"); log("Applied JSON edit");
+  } catch (e) {
+    toast("Invalid JSON: " + e.message, true);
+  }
+}
+
+// ─── STORE MGMT ────────────────────────────────────────────────────────────
+function addStoreDialog() {
+  document.getElementById("modal-title").textContent = "Create Store";
+  document.getElementById("modal-input").value = "";
+  document.getElementById("modal-type-sel").style.display = "";
+  S.modalCb = (name, type) => {
+    if (!name) return;
+    S.stores[name] = { type, data: type === "list" ? [] : {} };
+    renderTabs(); selectStore(name); log(`Created store "${name}" (${type})`);
+  };
+  openModal();
+}
+function deleteStore(name) {
+  if (!confirm(`Delete store "${name}"?`)) return;
+  delete S.stores[name];
+  if (S.current === name) S.current = Object.keys(S.stores)[0] || null;
+  renderTabs();
+  if (S.current) selectStore(S.current);
+  else renderTable();
+  log(`Deleted store "${name}"`);
+}
+
+// ─── SNAPSHOTS ─────────────────────────────────────────────────────────────
+function takeSnapshot() {
+  const name = document.getElementById("snap-name").value.trim();
+  if (!name) { toast("Enter a snapshot name", true); return; }
+  S.snapshots[name] = { stores: JSON.parse(JSON.stringify(S.stores)), time: Date.now() };
+  document.getElementById("snap-name").value = "";
+  renderSnapshots(); log(`Snapshot "${name}" saved`); toast(`Snapshot "${name}" saved`);
+  updateRightPanel();
+}
+function restoreSnapshot(name) {
+  if (!confirm(`Restore snapshot "${name}"? This overwrites all stores.`)) return;
+  S.stores = JSON.parse(JSON.stringify(S.snapshots[name].stores));
+  renderTabs();
+  if (S.current && S.stores[S.current]) selectStore(S.current);
+  else { S.current = Object.keys(S.stores)[0] || null; if (S.current) selectStore(S.current); }
+  log(`Restored snapshot "${name}"`); toast(`Restored "${name}"`);
+}
+function deleteSnapshot(name) {
+  delete S.snapshots[name];
+  renderSnapshots(); updateRightPanel();
+}
+function renderSnapshots() {
+  const el = document.getElementById("snap-list");
+  el.innerHTML = "";
+  for (const [name, snap] of Object.entries(S.snapshots)) {
+    const t = new Date(snap.time).toLocaleTimeString();
+    const div = document.createElement("div");
+    div.className = "snap-item";
+    div.innerHTML = `
+      <div><div class="snap-name">📸 ${name}</div><div class="snap-time">${t}</div></div>
+      <div class="snap-actions">
+        <button class="snap-btn restore" onclick="restoreSnapshot('${name}')" title="Restore">↩</button>
+        <button class="snap-btn del" onclick="deleteSnapshot('${name}')" title="Delete">✕</button>
+      </div>
+    `;
+    el.appendChild(div);
+  }
+}
+
+// ─── EXPORT / IMPORT ───────────────────────────────────────────────────────
+function buildSEF() {
+  return JSON.stringify({
+    _format: "sef", _version: "1.0", _extension: "toolvault",
+    _created: new Date().toISOString(), stores: S.stores,
+  }, null, 2);
+}
+function buildESEF() {
+  return JSON.stringify({
+    _format: "esef", _version: "1.0", _extension: "toolvault",
+    _editor: "ToolVault Editor", _created: new Date().toISOString(),
+    stores: S.stores, snapshots: S.snapshots,
+  }, null, 2);
+}
+function download(content, filename) {
+  const blob = new Blob([content], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function exportSEF() {
+  download(buildSEF(), "toolvault_export.sef");
+  log("Exported .sef"); toast("Exported .sef ✓");
+}
+function exportESEF() {
+  download(buildESEF(), "toolvault_export.esef");
+  log("Exported .esef"); toast("Exported .esef ✓");
+}
+function importSEF() {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".sef,.json";
+  inp.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.stores) S.stores = d.stores;
+        else S.stores = d;
+        renderTabs(); S.current = Object.keys(S.stores)[0] || null;
+        if (S.current) selectStore(S.current);
+        log(`Imported .sef: ${Object.keys(S.stores).length} stores`);
+        toast("Imported .sef ✓");
+      } catch(e) { toast("Parse error: " + e.message, true); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+function importESEF() {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".esef,.json";
+  inp.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.stores) S.stores = d.stores;
+        if (d.snapshots) S.snapshots = d.snapshots;
+        renderTabs(); renderSnapshots();
+        S.current = Object.keys(S.stores)[0] || null;
+        if (S.current) selectStore(S.current);
+        log("Imported .esef"); toast("Imported .esef ✓");
+      } catch(e) { toast("Parse error: " + e.message, true); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+// ─── SEND TO SCRATCH ───────────────────────────────────────────────────────
+function sendToScratch() {
+  if (window.opener && !window.opener.closed) {
+    window.opener.postMessage({ _toolvault: true, type: "save", stores: S.stores }, "*");
+    log("Pushed data to Scratch extension"); toast("Sent to Scratch ✓");
+  } else {
+    toast("Scratch window not found — open via extension", true);
+  }
+}
+
+// ─── RIGHT PANEL ───────────────────────────────────────────────────────────
+function updateRightPanel() {
+  document.getElementById("rp-snaps").textContent = Object.keys(S.snapshots).length;
+  renderSnapshots();
+}
+
+// ─── MODAL ─────────────────────────────────────────────────────────────────
+function openModal() { document.getElementById("modal-overlay").classList.add("show"); }
+function closeModal() { document.getElementById("modal-overlay").classList.remove("show"); }
+function confirmModal() {
+  const name = document.getElementById("modal-input").value.trim();
+  const type = document.getElementById("modal-type-sel").value;
+  closeModal();
+  if (S.modalCb) { S.modalCb(name, type); S.modalCb = null; }
+}
+document.getElementById("modal-input").addEventListener("keydown", e => { if (e.key === "Enter") confirmModal(); });
+
+// ─── TOAST ─────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, isError = false) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "show" + (isError ? " error" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = "", 2800);
+}
+
+// ─── LOG ───────────────────────────────────────────────────────────────────
+function log(msg) {
+  const t = new Date().toLocaleTimeString("en-GB", { hour12: false });
+  S.log.unshift({ t, msg });
+  if (S.log.length > 100) S.log.pop();
+  const el = document.getElementById("log-panel");
+  el.innerHTML = S.log.slice(0, 40).map(e =>
+    `<div class="log-entry"><span class="log-time">${e.t}</span><span class="log-msg">${e.msg}</span></div>`
+  ).join("");
+}
+
+// ─── UTIL ──────────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+// keyboard shortcuts
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); exportESEF(); }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") { e.preventDefault(); exportSEF(); }
+  if (e.key === "Escape") closeModal();
+});
+
+init();
+</script>
+</body>
+</html>
